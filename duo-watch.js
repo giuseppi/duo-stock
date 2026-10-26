@@ -9,12 +9,13 @@
 //
 // Needs Node 20+ (built in fetch). No npm install.
 
-const { MODELS, STORES, HEADERS, fetchRows, notify, alertNew } = require("./duo");
+const { MODELS, STORES, HEADERS, fetchRows, notify, pushClaims } = require("./duo");
+const { applyRows, unclaim, claimedKeys } = require("./record");
+const { apiFromGh, update, dispatchCheck } = require("./notebook");
 
 const INTERVAL_SEC = Number(process.env.INTERVAL_SEC || 120);
 const NTFY_TOPIC = process.env.NTFY_TOPIC; // subscribe to this in the ntfy app
 
-let alerted = []; // "store|part" already pushed; dropped when it sells out so a restock re-alerts
 let cookies = "";
 
 // Load the product page first like a browser would, and keep its cookies.
@@ -38,39 +39,126 @@ async function warmUp() {
 // your Apple sign-in cookies, and this repo is public.
 const EXTRA_HEADERS = JSON.parse(process.env.DUO_EXTRA_HEADERS || "{}");
 
-async function check() {
-  if (!cookies) await warmUp();
-  let rows;
-  try {
-    rows = await fetchRows({
-      "Sec-Fetch-Site": "same-origin",
-      "Sec-Fetch-Mode": "cors",
-      "Sec-Fetch-Dest": "empty",
-      ...(cookies ? { Cookie: cookies } : {}),
-      ...EXTRA_HEADERS,
-    });
-  } catch (e) {
-    if (e.blocked) cookies = ""; // get a fresh session next time
-    throw e;
-  }
-  alerted = await alertNew(rows, alerted);
+const keyOf = (store, part) => `${store}|${part}`;
 
-  const now = new Date().toLocaleTimeString();
+function availableKeys(rows) {
+  const keys = new Set();
+  for (const r of rows) for (const m of MODELS) if (r.parts[m.part]?.available) keys.add(keyOf(r.name, m.part));
+  return keys;
+}
+
+function logRows(rows, now) {
   const found = rows.flatMap((r) =>
     MODELS.filter((m) => r.parts[m.part]?.available).map((m) => `${m.name} at ${r.name}`)
   );
   const missing = rows.filter((r) => !r.found).map((r) => r.name);
   console.log(
-    `[${now}] ${found.length ? "AVAILABLE: " + found.join(", ") : `nothing yet (${rows.length - missing.length} stores checked)`}` +
+    `[${now.toLocaleTimeString()}] ${found.length ? "AVAILABLE: " + found.join(", ") : `nothing yet (${rows.length - missing.length} stores checked)`}` +
       (missing.length ? `; not in Apple's list: ${missing.join(", ")}` : "")
   );
 }
 
+// Undo claims whose push failed, so the next check tries again. Warning only.
+async function undoClaims(api, failed, nowIso) {
+  try {
+    await update(api, (rec) => unclaim(rec, failed), { nowIso });
+  } catch (e) {
+    console.warn(`could not undo a claim after a failed push (${e.message})`);
+  }
+}
+
+async function startGitHubCheck(api) {
+  try {
+    await dispatchCheck(api);
+  } catch (e) {
+    console.warn(`could not start a GitHub check (${e.message})`);
+  }
+}
+
+// Pushes keys that have no record to claim them in. Returns the ones that went out.
+async function pingKeys(keys, rows) {
+  const claims = keys.map((key) => {
+    const cut = key.indexOf("|");
+    return { store: key.slice(0, cut), part: key.slice(cut + 1), prevOut: null };
+  });
+  const failed = new Set((await pushClaims(claims, rows)).map((c) => keyOf(c.store, c.part)));
+  return keys.filter((key) => !failed.has(key));
+}
+
+// The laptop and check.js share state.json on GitHub: a restock is claimed
+// there before its push, so only one of them pings. When GitHub can't be
+// reached the laptop pings anyway (a repeat beats a miss) and remembers what
+// it pinged in `offline`, to hand over when GitHub is back.
+function createWatcher({ api, now = () => new Date() }) {
+  const offline = new Map(); // "store|part" -> ISO time of the offline ping
+  let lastKnown = new Set(); // keys the record held as claimed at the last good read
+  let warned = false;
+
+  async function claim(rows, nowIso) {
+    const out = await update(api, (rec) => applyRows(rec, rows, nowIso, { pinged: offline }), { nowIso });
+    offline.clear();
+    warned = false;
+    lastKnown = claimedKeys(out.record);
+    return out.result;
+  }
+
+  async function pingAndHandOver(result, rows, nowIso) {
+    const failed = await pushClaims(result.claims, rows);
+    for (const c of failed) lastKnown.delete(keyOf(c.store, c.part));
+    if (failed.length) await undoClaims(api, failed, nowIso);
+    if (result.changed) await startGitHubCheck(api);
+  }
+
+  async function fromMemory(rows, err) {
+    if (!warned) {
+      console.warn(`GitHub unreachable (${err.message}), pinging from this laptop's memory until it's back`);
+      warned = true;
+    }
+    const available = availableKeys(rows);
+    for (const key of offline.keys()) if (!available.has(key)) offline.delete(key);
+    const fresh = new Set((err.lastResult?.claims || []).map((c) => keyOf(c.store, c.part)));
+    const todo = [...available].filter((key) => !offline.has(key) && (!lastKnown.has(key) || fresh.has(key)));
+    for (const key of await pingKeys(todo, rows)) offline.set(key, now().toISOString());
+  }
+
+  async function checkOnce(extraHeaders = {}) {
+    const rows = await fetchRows(extraHeaders);
+    logRows(rows, now());
+    if (!api) return fromMemory(rows, new Error("no GitHub login"));
+    const nowIso = now().toISOString();
+    let result;
+    try {
+      result = await claim(rows, nowIso);
+    } catch (e) {
+      return fromMemory(rows, e);
+    }
+    await pingAndHandOver(result, rows, nowIso);
+  }
+
+  return { checkOnce, offline };
+}
+
+async function warmedHeaders() {
+  if (!cookies) await warmUp();
+  return {
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Dest": "empty",
+    ...(cookies ? { Cookie: cookies } : {}),
+    ...EXTRA_HEADERS,
+  };
+}
+
 let blockedStreak = 0;
 
-async function loop() {
+async function loop(watcher) {
   try {
-    await check();
+    try {
+      await watcher.checkOnce(await warmedHeaders());
+    } catch (e) {
+      if (e.blocked) cookies = ""; // get a fresh session next time
+      throw e;
+    }
     blockedStreak = 0;
   } catch (e) {
     blockedStreak = e.blocked ? blockedStreak + 1 : 0;
@@ -83,24 +171,37 @@ async function loop() {
   // the default 2 min), plus random jitter
   const backoff = blockedStreak ? Math.min(2 ** blockedStreak, 7.5) : 1;
   const wait = INTERVAL_SEC * 1000 * backoff + Math.floor(Math.random() * 20000);
-  setTimeout(loop, wait);
+  setTimeout(() => loop(watcher), wait);
 }
 
-process.on("unhandledRejection", (e) => {
-  console.error("duo-watch crashed:", e);
-  process.exit(1);
-});
+function start() {
+  process.on("unhandledRejection", (e) => {
+    console.error("duo-watch crashed:", e);
+    process.exit(1);
+  });
 
-if (!NTFY_TOPIC) console.warn("NTFY_TOPIC not set, alerts will only print to the terminal.");
-console.log(
-  `Watching ${MODELS.length} models at ${STORES.length} stores every ~${INTERVAL_SEC}s` +
-    (NTFY_TOPIC ? ", alerts to your ntfy topic" : "")
-);
-(async () => {
-  if (!process.argv.includes("--no-test")) {
-    await notify("Duo watcher running", "Test push. You'll get an alert like this when stock shows up.", {
-      click: "https://ntfy.sh/" + NTFY_TOPIC,
-    });
+  let api = null;
+  try {
+    api = apiFromGh();
+  } catch (e) {
+    console.warn(`Can't use GitHub (${e.message}). Pings will come from this laptop only, so GitHub may ping again for the same restock.`);
   }
-  loop();
-})();
+  if (!NTFY_TOPIC) console.warn("NTFY_TOPIC not set, alerts will only print to the terminal.");
+  console.log(
+    `Watching ${MODELS.length} models at ${STORES.length} stores every ~${INTERVAL_SEC}s` +
+      (NTFY_TOPIC ? ", alerts to your ntfy topic" : "")
+  );
+  const watcher = createWatcher({ api });
+  (async () => {
+    if (!process.argv.includes("--no-test")) {
+      await notify("Duo watcher running", "Test push. You'll get an alert like this when stock shows up.", {
+        click: "https://ntfy.sh/" + NTFY_TOPIC,
+      });
+    }
+    loop(watcher);
+  })();
+}
+
+if (require.main === module) start();
+
+module.exports = { createWatcher };
