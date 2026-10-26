@@ -52,7 +52,17 @@ function toRows(apiStores) {
         ? { available: info.pickupDisplay === "available", quote: info.pickupSearchQuote || "" }
         : null;
     }
-    return { name, city: s?.city || "", miles: Number(s?.storedistance) || null, found: Boolean(s), parts };
+    const hours = s?.retailStore?.storeHours;
+    return {
+      name,
+      city: s?.city || "",
+      miles: Number(s?.storedistance) || null,
+      found: Boolean(s),
+      hours: Array.isArray(hours)
+        ? hours.map(({ storeDays, storeTimings }) => ({ storeDays, storeTimings }))
+        : null,
+      parts,
+    };
   });
 }
 
