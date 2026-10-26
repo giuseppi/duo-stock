@@ -77,8 +77,8 @@ async function writeRecord(api, record, sha, message) {
 
 // Read, let fn decide, write if it changed something; on a lost race, start over.
 async function update(api, fn, { message = "Update stock state", tries = 5, nowIso } = {}) {
-  let result;
   for (let attempt = 1; ; attempt++) {
+    let result; // per attempt, so lastResult never comes from an earlier read
     try {
       const { record, sha } = await readRecord(api, nowIso);
       result = await fn(record);

@@ -108,7 +108,17 @@ test("apiFromGh parses ssh and https remotes", () => {
 });
 
 test("apiFromGh explains a missing login without the token", () => {
-  assert.throws(() => notebook.apiFromGh(() => { throw new Error("boom"); }), /gh/);
+  const run = (cmd) => { if (cmd === "gh") return "tok-secret-123\n"; throw new Error("tok-secret-123 boom"); };
+  assert.throws(() => notebook.apiFromGh(run), (err) => /gh/.test(err.message) && !err.message.includes("tok-secret-123"));
+});
+
+test("a failed read on a retry drops the earlier attempt's result", async () => {
+  gh.setFile(emptyRecord());
+  gh.beforeNextPut(() => { gh.setFile(withRestock(gh.file(), "other")); gh.failNext("GET", 500); });
+  await assert.rejects(
+    notebook.update(api, (record) => ({ record, changed: true, claims: ["stale"] }), { nowIso: NOW }),
+    (err) => /GET .* answered HTTP 500/.test(err.message) && err.lastResult === undefined
+  );
 });
 
 test("apiFromEnv requires both variables", () => {
