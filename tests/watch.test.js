@@ -205,3 +205,36 @@ test("no api at all behaves like GitHub down", async () => {
   assert.equal(ctx.pushes.length, 1);
   assert.equal(ctx.gh.puts.length, 0);
 });
+
+test("sold out and back during an outage pings again", async () => {
+  const w = start();
+  stock(N512);
+  await check(w); // GitHub claims it and the laptop pings
+  ctx.gh.failNext("GET", 500, 2);
+  stock();
+  await check(w);
+  stock(N512);
+  const net = installFetch({ apple: () => ctx.apple, github: ctx.gh });
+  await check(w);
+  assert.equal(net.pushes.length, 1);
+});
+
+test("failed offline push is retried after a read failure", async () => {
+  const w = start();
+  stock(N512);
+  await check(w);
+  // Meanwhile GitHub's own check recorded the sell-out.
+  const rec = ctx.gh.file();
+  rec.restocks[0].parts[N512].out = new Date(T0 + 1000).toISOString();
+  ctx.gh.setFile(rec);
+  ctx.clock = T0 + 30 * 60 * 1000;
+  ctx.gh.failNext("PUT", 500, 1);
+  const down = installFetch({ apple: () => ctx.apple, github: ctx.gh, ntfyUp: false });
+  await check(w);
+  assert.equal(down.pushes.length, 1); // tried, and failed
+  assert.equal(w.offline.size, 0);
+  ctx.gh.failNext("GET", 500, 1);
+  const up = installFetch({ apple: () => ctx.apple, github: ctx.gh });
+  await check(w);
+  assert.equal(up.pushes.length, 1);
+});

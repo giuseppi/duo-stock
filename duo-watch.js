@@ -91,7 +91,7 @@ async function pingKeys(keys, rows) {
 // it pinged in `offline`, to hand over when GitHub is back.
 function createWatcher({ api, now = () => new Date() }) {
   const offline = new Map(); // "store|part" -> ISO time of the offline ping
-  let lastKnown = new Set(); // keys the record held as claimed at the last good read
+  let lastKnown = new Set(); // claimed at the last good read; forgotten on sell-out
   let warned = false;
 
   async function claim(rows, nowIso) {
@@ -117,7 +117,9 @@ function createWatcher({ api, now = () => new Date() }) {
     const available = availableKeys(rows);
     for (const key of offline.keys()) if (!available.has(key)) offline.delete(key);
     const fresh = new Set((err.lastResult?.claims || []).map((c) => keyOf(c.store, c.part)));
-    const todo = [...available].filter((key) => !offline.has(key) && (!lastKnown.has(key) || fresh.has(key)));
+    // a sell-out, or a claim the record never saved, makes the next sighting a new restock
+    for (const key of [...lastKnown]) if (!available.has(key) || fresh.has(key)) lastKnown.delete(key);
+    const todo = [...available].filter((key) => !offline.has(key) && !lastKnown.has(key));
     for (const key of await pingKeys(todo, rows)) offline.set(key, now().toISOString());
   }
 
