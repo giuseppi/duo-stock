@@ -36,15 +36,19 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: node check.js
 
+      # The run stays red when the check fails, but its error banner still gets published.
       - name: Build page
+        if: ${{ !cancelled() && hashFiles('status.json') != '' }}
         run: mkdir _site && cp index.html status.json _site/
 
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+      - if: ${{ !cancelled() && hashFiles('status.json') != '' }}
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: _site
 
   deploy:
     needs: check
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10   # deploy-pages waits up to 10 min for Pages itself
     permissions:
