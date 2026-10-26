@@ -11,4 +11,4 @@ Personal iPhone Duo pickup-stock alert bot. Setup and layout: README.md. Models 
 ## Issue Log
 
 - **Bot committed on every run.** Found 2026-10-26. Resolved 2026-10-26. status.json held a per-run timestamp, so every run committed (~288/day), past the Pages branch-build soft limit of 10/hour, and bot pushes made with `GITHUB_TOKEN` may not trigger branch builds at all. Resolution: publish Pages from the workflow; commit only state.json, only when it changes; stop counting failures after the alert so a long outage stops committing. If Apple blocks only some runner IPs, failStreak flips 0/1 and still commits each flip.
-- **Does Apple block GitHub Actions IPs?** Found 2026-10-26. Open until the first Actions run is read.
+- **Does Apple block GitHub Actions IPs?** Found 2026-10-26. Resolved 2026-10-26. Resolution: no; the first two Actions runs got full answers for all 7 stores. If that changes, the page shows the error and one push goes out after 6 failed checks.
