@@ -78,8 +78,8 @@ function markAvailable(record, row, part, nowIso, pinged) {
   if (known) {
     const prevOut = known.out;
     known.out = null;
-    const isFlap = now - Date.parse(prevOut) <= FLAP_MS;
-    return { changed: true, claim: isFlap ? null : { store: row.name, part, prevOut } };
+    const quiet = now - Date.parse(prevOut) <= FLAP_MS || pinged?.has(key);
+    return { changed: true, claim: quiet ? null : { store: row.name, part, prevOut } };
   }
   const seenAt = pinged?.get(key);
   restock.parts[part] = { in: seenAt ?? nowIso, out: null };

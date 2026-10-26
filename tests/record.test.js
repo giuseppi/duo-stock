@@ -103,6 +103,15 @@ test("pinged keys are recorded without a claim", () => {
   assert.ok(claimedKeys(r.record).has(`Brea Mall|${E}`));
 });
 
+test("a pinged key returning inside an open restock is recorded without a claim", () => {
+  const { rec } = returning();
+  const pinged = new Map([[`${IRV}|${H}`, at(18)]]);
+  const back = applyRows(rec, [row(IRV, [E, H])], at(20), { pinged });
+  assert.equal(back.claims.length, 0);
+  assert.equal(back.record.restocks[0].parts[H].out, null);
+  assert.equal(back.record.restocks[0].parts[H].in, at(0));
+});
+
 test("unclaim removes a new part and an empty restock", () => {
   const r = applyRows(emptyRecord(), [row(IRV, [H])], T0);
   const u = unclaim(r.record, r.claims);
