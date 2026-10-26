@@ -109,37 +109,25 @@ async function notify(title, body, { priority = "urgent", click } = {}) {
   }
 }
 
-// Pushes every store+model that is in stock now but not in `alerted`, one
-// push per model so the title and Click link fit it. Returns the new alerted
-// list: unknown cells keep what we knew, and hits whose push failed are left
-// out so the next check tries again. Sorted so unchanged stock gives an
-// identical list.
-async function alertNew(rows, alerted) {
-  const was = new Set(alerted);
-  const keep = [];
-  await Promise.all(
+// Pushes the claims: one push per model so the title and Click link fit it,
+// all at once. Returns the claims whose push failed so the caller can undo them.
+async function pushClaims(claims, rows) {
+  const failed = await Promise.all(
     MODELS.map(async (model) => {
-      const fresh = [];
-      for (const row of rows) {
-        const key = `${row.name}|${model.part}`;
-        const cell = row.parts[model.part];
-        if (cell === null) {
-          if (was.has(key)) keep.push(key);
-        } else if (cell.available) {
-          if (was.has(key)) keep.push(key);
-          else fresh.push(row);
-        }
-      }
-      if (!fresh.length) return;
+      const mine = claims.filter((c) => c.part === model.part);
+      if (!mine.length) return [];
+      const hits = STORES.filter((name) => mine.some((c) => c.store === name)).map((name) =>
+        rows.find((r) => r.name === name)
+      );
       const pushed = await notify(
-        `${model.name} at ${fresh.map((r) => r.name).join(", ")}`,
-        fresh.map((r) => `${r.name} (${r.city}): ${r.parts[model.part].quote || "Available"}`).join("\n"),
+        `${model.name} at ${hits.map((r) => r.name).join(", ")}`,
+        hits.map((r) => `${r.name} (${r.city}): ${r.parts[model.part].quote || "Available"}`).join("\n"),
         { click: model.buy }
       );
-      if (pushed) keep.push(...fresh.map((r) => `${r.name}|${model.part}`));
+      return pushed ? [] : mine;
     })
   );
-  return keep.sort();
+  return failed.flat();
 }
 
-module.exports = { MODELS, STORES, PICKUP_URL, HEADERS, toRows, fetchRows, notify, alertNew };
+module.exports = { MODELS, STORES, PICKUP_URL, HEADERS, toRows, fetchRows, notify, pushClaims };

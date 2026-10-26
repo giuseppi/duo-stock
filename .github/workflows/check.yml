@@ -22,13 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     permissions:
-      contents: write   # commit state.json
+      contents: write   # update state.json through the API
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          # The branch tip, not the commit this run was queued at, so a run
-          # that waited behind another one sees the state.json it saved.
-          ref: ${{ github.ref }}
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -37,28 +33,8 @@ jobs:
       - name: Check stock
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: node check.js
-
-      # state.json only changes when stock or the failure streak does, so
-      # most runs commit nothing. status.json is never committed: it goes
-      # straight to Pages below.
-      - name: Save state
-        run: |
-          git add state.json
-          if git diff --cached --quiet; then
-            echo "state.json unchanged, nothing to commit"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Update stock state"
-          # If main moved during this run (say you pushed), rebase and retry.
-          # Losing this commit would mean repeat alerts next run.
-          for try in 1 2 3; do
-            git push origin "HEAD:$GITHUB_REF_NAME" && exit 0
-            git pull --rebase origin "$GITHUB_REF_NAME"
-          done
-          exit 1
 
       - name: Build page
         run: mkdir _site && cp index.html status.json _site/
