@@ -19,7 +19,7 @@
   main { max-width:640px; margin:0 auto; padding:32px 16px; }
   h1 { font-size:22px; margin:0 0 4px; }
   .sub { color:var(--muted); font-size:14px; margin-bottom:20px; }
-  .banner { padding:14px 16px; border-radius:12px; margin-bottom:16px; font-weight:600; background:var(--card); border:1px solid var(--line); }
+  .banner { padding:14px 16px; border-radius:12px; margin-bottom:16px; font-weight:600; background:var(--card); border:1px solid var(--line); text-wrap:pretty; }
   .banner.yes { background:var(--yesbg); color:var(--yes); border-color:transparent; }
   .banner.bad { background:var(--badbg); color:var(--bad); border-color:transparent; }
   .banner.warn { background:var(--warnbg); color:var(--warn); border-color:transparent; }
@@ -51,7 +51,8 @@
   .h3 { background:var(--h3); color:var(--f3); } .h4 { background:var(--h4); color:var(--f4); }
   .heat .tot { font-weight:600; }
   .entry { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:8px; }
-  .entry .top { display:flex; justify-content:space-between; gap:8px; }
+  .entry .top { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .nw { white-space:nowrap; }
   .entry .when, .entry .meta { color:var(--muted); font-size:13px; }
   .entry .open { color:var(--yes); font-weight:600; }
   .bar { height:6px; margin-top:8px; border-radius:3px; background:var(--h2); }
@@ -157,7 +158,7 @@ function render(s, note) {
 const WINDOWS = ["12-6a", "6-9a", "9a-12", "12-5p", "5p-12"];
 const SHOWN = 10;
 let showAll = false;
-let history; // kept so "Show older" can redraw without waiting for a refresh
+let shownHistory; // kept so "Show older" can redraw without waiting for a refresh
 
 const level = (n, max) => (n === 0 ? 0 : Math.ceil((4 * n) / max));
 
@@ -172,13 +173,14 @@ function heatmap(grid) {
 
 function entry(e, longest) {
   const lasted = e.open ? `<span class="open">${esc(e.lasted)}</span>` : esc(e.lasted);
+  const lastedHtml = `<span class="nw">${lasted}</span>`;
   const bar = e.open ? "" : `<div class="bar" style="width:max(4px,${longest ? (100 * e.minutes) / longest : 0}%)"></div>`;
   return `<div class="entry"><div class="top"><b>${esc(e.store)}</b><span class="when">${esc(e.when)}</span></div>` +
-    `<div class="meta">${esc(e.models)} · ${lasted}</div>${bar}</div>`;
+    `<div class="meta">${esc(e.models)} · ${lastedHtml}</div>${bar}</div>`;
 }
 
 function renderHistory(h) {
-  history = h;
+  shownHistory = h;
   let html;
   if (!h) {
     html = banner("", "History isn't available right now", "It couldn't be loaded on the last check and will be back after a good check.");
@@ -186,6 +188,7 @@ function renderHistory(h) {
     html = h.best ? banner("yes", h.best.title, h.best.detail) : banner("", h.learning);
     if (h.basis) html += `<p class="basis">${esc(h.basis)}</p>`;
     if (h.count) html += "<h2>Restocks by time of day</h2>" + heatmap(h.grid) + "<h2>Every restock, newest first</h2>" + logCards(h.log);
+    html += '<div class="foot">Counts are restocks seen, not phones. Apple doesn\'t say how many a store has.</div>';
   }
   document.getElementById("hist").innerHTML = html;
 }
@@ -211,7 +214,7 @@ addEventListener("hashchange", showTab);
 document.getElementById("hist").addEventListener("click", (e) => {
   if (e.target.id !== "more") return;
   showAll = true;
-  renderHistory(history);
+  renderHistory(shownHistory);
 });
 showTab();
 load();
