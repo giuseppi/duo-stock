@@ -32,7 +32,11 @@
   th a:hover { text-decoration:underline; }
   th:first-child, td:first-child { width:36%; text-align:left; padding-left:14px; }
   .store { font-size:15px; }
-  .city { color:var(--muted); font-size:12px; }
+  .city { color:var(--muted); font-size:12px; overflow:hidden; }
+  /* "City · 10 mi": every part starts with a dot, and the dot that would start a line is clipped */
+  .city > div { display:flex; flex-wrap:wrap; margin-left:-1em; }
+  .city span { position:relative; padding-left:1em; }
+  .city span::before { content:"·"; position:absolute; left:0; width:1em; text-align:center; }
   .in { display:inline-block; padding:2px 9px; border-radius:999px; background:var(--yesbg); color:var(--yes); font-weight:600; }
   .no, .unk { color:var(--no); }
   .foot { color:var(--muted); font-size:13px; margin-top:16px; }
@@ -146,8 +150,9 @@ function render(s, note) {
     return `<th><a href="${esc(m.buy)}">${esc(size)}<span>${esc(color.join(" "))}</span></a></th>`;
   }).join("");
   document.getElementById("rows").innerHTML = s.stores.map((r) => {
-    const where = !s.ok ? r.city : r.found ? r.city + (r.miles ? " · " + Math.round(r.miles) + " mi" : "") : "Not in Apple's list this time";
-    return `<tr><td><div class="store">${esc(r.name)}</div><div class="city">${esc(where)}</div></td>` +
+    const where = !s.ok ? [r.city] : r.found ? [r.city, r.miles && Math.round(r.miles) + " mi"] : ["Not in Apple's list this time"];
+    const parts = where.filter(Boolean).map((p) => `<span>${esc(p)}</span>`).join("");
+    return `<tr><td><div class="store">${esc(r.name)}</div><div class="city"><div>${parts}</div></div></td>` +
       s.models.map((m) => cell(r.parts[m.part])).join("") + "</tr>";
   }).join("");
   document.getElementById("grid").hidden = false;
