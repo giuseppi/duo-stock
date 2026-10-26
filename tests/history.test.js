@@ -190,3 +190,11 @@ test("out before in clamps to zero", () => {
   assert.equal(entry.minutes, 0);
   assert.equal(entry.lasted, "lasted ~1 min");
 });
+
+test("log and basis follow start time, not array order", () => {
+  const r = rec([rs(IRV, 28, 8, 0, 10), rs(SCP, 27, 8, 0, 10)]);
+  const s = summarize(r);
+  assert.equal(s.log[0].when, "Wed Oct 28, 8:00 AM");
+  assert.equal(s.log[1].when, "Tue Oct 27, 8:00 AM");
+  assert.equal(s.basis, "Based on 2 restocks seen since Oct 27.");
+});

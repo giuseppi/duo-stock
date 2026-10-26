@@ -154,15 +154,17 @@ function logEntry(r) {
 function summarize(record) {
   const restocks = record.restocks;
   const count = restocks.length;
+  // Array order is not start order: an offline sighting is appended late.
+  const byStart = restocks.map((r) => ({ r, start: restockStart(r) })).sort((a, b) => a.start.localeCompare(b.start));
   const grid = buildGrid(restocks);
   const clear = grid[0].total >= MIN_FOR_BEST && grid[0].total > grid[1].total;
   return {
     count,
-    basis: count ? `Based on ${plural(count, "restock")} seen since ${pacific(restockStart(restocks[0])).day}.` : null,
+    basis: count ? `Based on ${plural(count, "restock")} seen since ${pacific(byStart[0].start).day}.` : null,
     best: clear ? bestBet(record, grid[0]) : null,
     grid,
     learning: clear ? null : learningNote(count, grid),
-    log: restocks.map(logEntry).reverse(),
+    log: byStart.map((x) => logEntry(x.r)).reverse(),
   };
 }
 
