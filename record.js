@@ -7,18 +7,36 @@ const emptyRecord = () => ({ version: 2, failStreak: 0, hours: {}, restocks: [] 
 
 const isPlainObject = (x) => x !== null && typeof x === "object" && !Array.isArray(x);
 
-// Turns whatever state.json held (v1 or v2) into a v2 record.
+const UNKNOWN_FORMAT =
+  "state.json on GitHub has a format this version doesn't know, so it was left alone. Fix or delete it.";
+
+const isStamp = (x) => x === null || typeof x === "string";
+const isPart = (p) => isPlainObject(p) && typeof p.in === "string" && isStamp(p.out);
+const isRestock = (r) =>
+  isPlainObject(r) && typeof r.store === "string" && isPlainObject(r.parts) && Object.values(r.parts).every(isPart);
+const isV1Key = (k) => typeof k === "string" && k.indexOf("|") > 0 && k.indexOf("|") < k.length - 1;
+
+const validV2 = (raw) =>
+  raw.version === 2 &&
+  (raw.restocks === undefined || (Array.isArray(raw.restocks) && raw.restocks.every(isRestock))) &&
+  (raw.hours === undefined || isPlainObject(raw.hours)) &&
+  (raw.failStreak === undefined || typeof raw.failStreak === "number");
+
+const validV1 = (raw) => raw.version === undefined && Array.isArray(raw.inStock) && raw.inStock.every(isV1Key);
+
+// Turns whatever state.json held (v1 or v2) into a v2 record. Anything else
+// throws: writing back a default would replace the shared history.
 function migrate(raw, nowIso) {
-  if (!isPlainObject(raw)) throw new Error("state.json has an unknown format");
+  if (!isPlainObject(raw) || !(validV2(raw) || validV1(raw))) throw new Error(UNKNOWN_FORMAT);
   const record = emptyRecord();
   record.failStreak = Number(raw.failStreak) || 0;
   if (raw.version === 2) {
-    if (isPlainObject(raw.hours)) record.hours = structuredClone(raw.hours);
-    if (Array.isArray(raw.restocks)) record.restocks = structuredClone(raw.restocks);
+    if (raw.hours) record.hours = structuredClone(raw.hours);
+    if (raw.restocks) record.restocks = structuredClone(raw.restocks);
     return record;
   }
   // v1 only knew what was in stock and already pinged: treat each as open.
-  for (const key of Array.isArray(raw.inStock) ? raw.inStock : []) {
+  for (const key of raw.inStock) {
     const cut = key.indexOf("|");
     const store = key.slice(0, cut);
     const part = key.slice(cut + 1);

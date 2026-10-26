@@ -129,6 +129,14 @@ test("invalid JSON on GitHub: no pushes, run fails, file untouched", async () =>
   assert.equal(ctx.gh.puts.length, 0);
 });
 
+test("unknown state.json version on GitHub: no pushes, run fails, file untouched", async () => {
+  ctx.gh.setFile({ version: 3, restocks: [] });
+  ctx.apple = appleSays({ "Mission Viejo": [W256] });
+  await assert.rejects(ctx.run(), /left alone/);
+  assert.equal(ctx.pushes.length, 0);
+  assert.equal(ctx.gh.puts.length, 0);
+});
+
 test("without NTFY_TOPIC nothing is sent and nothing crashes", async () => {
   const topic = process.env.NTFY_TOPIC;
   delete process.env.NTFY_TOPIC;

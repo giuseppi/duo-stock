@@ -17,7 +17,7 @@ test.beforeEach(() => {
 
 const withRestock = (record, id) => ({
   ...record,
-  restocks: [...record.restocks, { id }],
+  restocks: [...record.restocks, { id, store: "Irvine Spectrum", parts: {} }],
 });
 
 test("read of a missing file gives an empty record", async () => {

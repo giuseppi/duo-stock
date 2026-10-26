@@ -161,7 +161,32 @@ test("migrate fills missing v2 fields", () => {
 });
 
 test("migrate rejects non-objects", () => {
-  for (const bad of [null, [], "x"]) assert.throws(() => migrate(bad, T0), /unknown format/);
+  for (const bad of [null, [], "x"]) assert.throws(() => migrate(bad, T0), /left alone/);
+});
+
+test("migrate leaves unknown or malformed shapes alone instead of wiping them", () => {
+  const part = { in: T0, out: null };
+  const shapes = {
+    "version 3": { version: 3, restocks: [] },
+    'version "2"': { version: "2", restocks: [] },
+    "restocks not an array": { version: 2, restocks: "x" },
+    "restock with no store": { version: 2, restocks: [{ parts: { a: part } }] },
+    "part missing in": { version: 2, restocks: [{ store: IRV, parts: { a: { out: null } } }] },
+    "hours not an object": { version: 2, restocks: [], hours: [] },
+    "v1 inStock entry not a string": { inStock: [5] },
+    "v1 key without a bar": { inStock: ["Irvine Spectrum"] },
+  };
+  for (const [name, raw] of Object.entries(shapes)) {
+    assert.throws(() => migrate(raw, T0), /left alone/, name);
+  }
+});
+
+test("migrate groups a v1 file with several stores into one restock per store", () => {
+  const rec = migrate({ inStock: [`${IRV}|${E}`, `${IRV}|${H}`, `Brea Mall|${H}`] }, T0);
+  assert.deepEqual(rec.restocks, [
+    { store: IRV, parts: { [E]: { in: T0, out: null }, [H]: { in: T0, out: null } } },
+    { store: "Brea Mall", parts: { [H]: { in: T0, out: null } } },
+  ]);
 });
 
 test("toRows keeps only storeDays and storeTimings of Apple's hours", () => {
