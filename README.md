@@ -53,5 +53,8 @@ Actions tab and re-enable it.
 - `INTERVAL_SEC` sets the seconds between laptop checks (default 120). Use 60
   or more, so Apple is less likely to block your laptop. GitHub's own schedule
   cannot go below 5 minutes.
-- `DUO_EXTRA_HEADERS` (JSON) adds request headers to Apple calls. `--no-test`
-  skips the test push on startup.
+- `DUO_EXTRA_HEADERS` (JSON) adds request headers to Apple calls. Use it only
+  if Apple keeps blocking the laptop with 541 or 403. Headers copied from the
+  browser ("Copy as cURL") carry your Apple sign-in cookies, so keep them only
+  in this env var, never in a file in this public repo.
+- `--no-test` skips the test push on startup.
