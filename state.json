@@ -1,4 +1,89 @@
 {
-  "inStock": [],
-  "failStreak": 0
+  "version": 2,
+  "failStreak": 0,
+  "hours": {
+    "Irvine Spectrum": [
+      {
+        "storeDays": "Fri-Sat",
+        "storeTimings": "10:00 AM-10:00 PM"
+      },
+      {
+        "storeDays": "Mon-Thu, Sun",
+        "storeTimings": "10:00 AM-9:00 PM"
+      }
+    ],
+    "South Coast Plaza": [
+      {
+        "storeDays": "Sun",
+        "storeTimings": "11:00 AM-7:00 PM"
+      },
+      {
+        "storeDays": "Mon-Thu",
+        "storeTimings": "10:00 AM-8:00 PM"
+      },
+      {
+        "storeDays": "Fri-Sat",
+        "storeTimings": "10:00 AM-9:00 PM"
+      }
+    ],
+    "Mission Viejo": [
+      {
+        "storeDays": "Sun",
+        "storeTimings": "11:00 AM-7:00 PM"
+      },
+      {
+        "storeDays": "Mon-Sat",
+        "storeTimings": "10:00 AM-8:00 PM"
+      }
+    ],
+    "Fashion Island": [
+      {
+        "storeDays": "Mon-Sat",
+        "storeTimings": "10:00 AM-8:00 PM"
+      },
+      {
+        "storeDays": "Sun",
+        "storeTimings": "11:00 AM-6:00 PM"
+      }
+    ],
+    "Brea Mall": [
+      {
+        "storeDays": "Sun",
+        "storeTimings": "11:00 AM-7:00 PM"
+      },
+      {
+        "storeDays": "Mon-Thu",
+        "storeTimings": "10:00 AM-8:00 PM"
+      },
+      {
+        "storeDays": "Fri-Sat",
+        "storeTimings": "10:00 AM-9:00 PM"
+      }
+    ],
+    "Los Cerritos": [
+      {
+        "storeDays": "Sun",
+        "storeTimings": "11:00 AM-7:00 PM"
+      },
+      {
+        "storeDays": "Mon-Sat",
+        "storeTimings": "10:00 AM-9:00 PM"
+      }
+    ],
+    "Victoria Gardens": [
+      {
+        "storeDays": "Sun",
+        "storeTimings": "11:00 AM-7:00 PM"
+      },
+      {
+        "storeDays": "Mon-Thu",
+        "storeTimings": "10:00 AM-8:00 PM"
+      },
+      {
+        "storeDays": "Fri-Sat",
+        "storeTimings": "10:00 AM-9:00 PM"
+      }
+    ]
+  },
+  "restocks": []
 }
