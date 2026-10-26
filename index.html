@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duo Stock</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='8' y='2' width='16' height='28' rx='4' fill='%231f8a4c'/%3E%3C/svg%3E">
+<style>
+  :root { --bg:#f6f6f4; --card:#fff; --text:#1a1a1a; --muted:#777; --line:#e4e4e0; --yes:#1f8a4c; --yesbg:#e3f4ea; --no:#999;
+          --bad:#b42318; --badbg:#fdecea; --warn:#8a5a00; --warnbg:#fdf3dc; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#111; --card:#1b1b1b; --text:#eee; --muted:#999; --line:#2a2a2a; --yes:#4fd18b; --yesbg:#16301f; --no:#666;
+            --bad:#ff8a80; --badbg:#3a1714; --warn:#f5c26b; --warnbg:#33270f; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
+  main { max-width:640px; margin:0 auto; padding:32px 16px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--muted); font-size:14px; margin-bottom:20px; }
+  .banner { padding:14px 16px; border-radius:12px; margin-bottom:16px; font-weight:600; background:var(--card); border:1px solid var(--line); }
+  .banner.yes { background:var(--yesbg); color:var(--yes); border-color:transparent; }
+  .banner.bad { background:var(--badbg); color:var(--bad); border-color:transparent; }
+  .banner.warn { background:var(--warnbg); color:var(--warn); border-color:transparent; }
+  .banner small { display:block; font-weight:400; font-size:14px; margin-top:2px; }
+  table { width:100%; table-layout:fixed; border-collapse:separate; border-spacing:0; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  th, td { padding:10px 4px; border-top:1px solid var(--line); text-align:center; font-size:13px; }
+  thead th { border-top:0; vertical-align:bottom; font-weight:600; line-height:1.25; }
+  thead th span { display:block; color:var(--muted); font-weight:400; font-size:12px; }
+  th a { color:inherit; text-decoration:none; }
+  th a:hover { text-decoration:underline; }
+  th:first-child, td:first-child { width:36%; text-align:left; padding-left:14px; }
+  .store { font-size:15px; }
+  .city { color:var(--muted); font-size:12px; }
+  .in { display:inline-block; padding:2px 9px; border-radius:999px; background:var(--yesbg); color:var(--yes); font-weight:600; }
+  .no, .unk { color:var(--no); }
+  .foot { color:var(--muted); font-size:13px; margin-top:16px; }
+  @media (max-width:420px) {
+    th:first-child, td:first-child { width:40%; padding-left:12px; }
+    .store { font-size:14px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>iPhone Duo pickup stock</h1>
+  <div class="sub" id="checked">Loading…</div>
+  <div id="banners"></div>
+  <table id="grid" hidden>
+    <thead><tr id="head"></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div class="foot">
+    Checks run on GitHub about every 5 to 15 minutes. Push alerts go out through ntfy.
+    Model names link to their buy pages.
+  </div>
+</main>
+<script>
+const STALE_MIN = 30; // the schedule is "every 5 min", but GitHub often runs it late
+
+// Apple's text ends up in innerHTML, so escape it.
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+function ago(iso) {
+  const m = Math.round((Date.now() - new Date(iso)) / 60000);
+  return m < 1 ? "just now" : m < 60 ? m + " min ago" : Math.round(m / 60) + " hr ago";
+}
+
+const banner = (cls, text, small) =>
+  `<div class="banner ${cls}">${esc(text)}${small ? `<small>${esc(small)}</small>` : ""}</div>`;
+
+function cell(c) {
+  if (!c) return `<td class="unk" title="Unknown">?</td>`;
+  return c.available
+    ? `<td title="${esc(c.quote)}"><span class="in">Yes</span></td>`
+    : `<td class="no" title="${esc(c.quote)}">No</td>`;
+}
+
+let last; // last status.json that loaded, kept on screen if a refresh fails
+
+async function load() {
+  try {
+    const s = await (await fetch("status.json?t=" + Date.now())).json();
+    render(s, "");
+    last = s;
+  } catch {
+    if (last) render(last, " · couldn't refresh, retrying");
+    else document.getElementById("checked").textContent = "No results yet. Run the workflow once.";
+  }
+}
+
+function render(s, note) {
+  const minutes = (Date.now() - new Date(s.checkedAt)) / 60000;
+  document.getElementById("checked").textContent =
+    "Last check " + ago(s.checkedAt) + " (" + new Date(s.checkedAt).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" }) + ")" + note;
+
+  const hits = [];
+  for (const m of s.models) for (const r of s.stores) if (r.parts[m.part]?.available) hits.push(`${m.name} at ${r.name}`);
+  let html = "";
+  if (!s.ok) {
+    html += banner("bad", "Last check failed: " + (s.error || "unknown error"),
+      "Stock below is unknown until a check succeeds. " +
+      (s.failStreak >= 6 ? "6+ failures in a row, so you got a push about it." : `${s.failStreak} failure${s.failStreak === 1 ? "" : "s"} in a row.`));
+  }
+  if (minutes > STALE_MIN) {
+    html += banner("warn", "Checker looks stalled",
+      `No check in over ${STALE_MIN} min. GitHub may be running the schedule late, or it stopped. Look at the Actions tab.`);
+  }
+  if (s.ok) html += hits.length ? banner("yes", "In stock: " + hits.join("; ")) : banner("", "Not in stock anywhere you're watching");
+  document.getElementById("banners").innerHTML = html;
+
+  document.getElementById("head").innerHTML = "<th>Store</th>" + s.models.map((m) => {
+    const [size, ...color] = m.name.split(" ");
+    return `<th><a href="${esc(m.buy)}">${esc(size)}<span>${esc(color.join(" "))}</span></a></th>`;
+  }).join("");
+  document.getElementById("rows").innerHTML = s.stores.map((r) => {
+    const where = !s.ok ? r.city : r.found ? r.city + (r.miles ? " · " + Math.round(r.miles) + " mi" : "") : "Not in Apple's list this time";
+    return `<tr><td><div class="store">${esc(r.name)}</div><div class="city">${esc(where)}</div></td>` +
+      s.models.map((m) => cell(r.parts[m.part])).join("") + "</tr>";
+  }).join("");
+  document.getElementById("grid").hidden = false;
+}
+load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>
