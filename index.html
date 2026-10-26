@@ -165,7 +165,7 @@ const level = (n, max) => (n === 0 ? 0 : Math.ceil((4 * n) / max));
 function heatmap(grid) {
   const max = Math.max(...grid.flatMap((g) => g.counts));
   const head = "<tr><th>Store</th>" + WINDOWS.map((w) => `<th>${w}</th>`).join("") + "<th>All</th></tr>";
-  const rows = grid.map((g) => "<tr><td>" + esc(g.store) + g.counts.map((n, i) =>
+  const rows = grid.map((g) => "<tr><td>" + esc(g.store) + "</td>" + g.counts.map((n, i) =>
     `<td><span class="h${level(n, max)}" title="${esc(`${g.store}, ${WINDOWS[i]}: ${n} restock${n === 1 ? "" : "s"}`)}">${n}</span></td>`).join("") +
     `<td class="tot">${g.total}</td></tr>`).join("");
   return `<table class="heat"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
