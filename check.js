@@ -87,7 +87,17 @@ function logRows(rows) {
   }
 }
 
-async function main({ now = () => new Date(), env = process.env } = {}) {
+// Every rejection is logged here once, with context, before the caller exits 1.
+async function main(options = {}) {
+  try {
+    await check(options);
+  } catch (e) {
+    console.error(`check failed: ${e.message}`);
+    throw e;
+  }
+}
+
+async function check({ now = () => new Date(), env = process.env } = {}) {
   const api = apiFromEnv(env);
   const nowIso = now().toISOString();
   const status = { checkedAt: nowIso, ok: true, models: MODELS };
@@ -114,8 +124,11 @@ async function main({ now = () => new Date(), env = process.env } = {}) {
     // The record could not be read or saved. If we got as far as deciding
     // on pushes, send them anyway: a repeat ping beats a missed restock.
     if (e.lastResult?.claims?.length) await pushClaims(e.lastResult.claims, rows);
-    console.error(`check failed: ${e.message}`);
-    writeStatus({ ...status, ok: false, error: e.message, stores: toRows([]) });
+    try {
+      writeStatus({ ...status, ok: false, error: e.message, stores: toRows([]) });
+    } catch (we) {
+      console.error(`could not write status.json: ${we.message}`);
+    }
     throw e;
   }
 }

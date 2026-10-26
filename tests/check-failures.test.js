@@ -2,10 +2,19 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { APPLE_STORES } = require("./fakes");
+const fs = require("fs");
+const { main } = require("../check");
+const { APPLE_STORES, captureConsole } = require("./fakes");
 const { setup, cell, openKeys, N256, N512, W256, appleSays } = require("./check-harness");
 
 const ctx = setup();
+
+// The harness already checks status.json for leaked secrets on every run.
+function assertStatusError(pattern) {
+  const status = JSON.parse(fs.readFileSync("status.json", "utf8"));
+  assert.equal(status.ok, false);
+  assert.match(status.error, pattern);
+}
 const VERIFIED_KEY = "Irvine Spectrum|MK1H4LL/A";
 
 test("failure streak: one 'failing' push at 6, quiet after, then one 'back' push and no repeat stock push", async () => {
@@ -140,6 +149,7 @@ test("GitHub unreadable: no pushes and the run fails", async () => {
   await assert.rejects(ctx.run());
   assert.equal(ctx.pushes.length, 0);
   assert.match(ctx.logs, /check failed: /);
+  assertStatusError(/GitHub API GET .* answered HTTP 500/);
 });
 
 test("GitHub unwritable: pushes go out and the run fails", async () => {
@@ -148,4 +158,15 @@ test("GitHub unwritable: pushes go out and the run fails", async () => {
   await assert.rejects(ctx.run());
   assert.equal(ctx.pushes.length, 1);
   assert.equal(ctx.pushes[0].title, "512GB Night Sky at Irvine Spectrum");
+  assertStatusError(/GitHub API PUT .* answered HTTP 500/);
+});
+
+test("missing GitHub settings: the run fails and says why", async () => {
+  const con = captureConsole();
+  try {
+    await assert.rejects(main({ env: {} }), /GITHUB_TOKEN and GITHUB_REPOSITORY must be set/);
+  } finally {
+    con.restore();
+  }
+  assert.match(con.text(), /check failed: GITHUB_TOKEN and GITHUB_REPOSITORY must be set/);
 });
