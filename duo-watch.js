@@ -16,7 +16,13 @@ const { apiFromGh, update, dispatchCheck } = require("./notebook");
 const INTERVAL_SEC = Number(process.env.INTERVAL_SEC || 120);
 const NTFY_TOPIC = process.env.NTFY_TOPIC; // subscribe to this in the ntfy app
 
+// ANSI styles, only on a terminal that shows colors (NO_COLOR turns them off).
+const COLOR = Boolean(process.stdout.hasColors?.());
+const style = (code, text) => (COLOR ? `\x1b[${code}m${text}\x1b[0m` : text);
+const dim = (text) => style("2", text);
+
 let cookies = "";
+let warmed = false; // Apple may send no cookies, so this can't be `cookies !== ""`
 
 // Load the product page first like a browser would, and keep its cookies.
 // The pickup endpoint works without them, but a fresh session is a cheap
@@ -28,7 +34,8 @@ async function warmUp() {
   });
   const set = res.headers.getSetCookie?.() || [];
   cookies = set.map((c) => c.split(";")[0]).join("; ");
-  console.log(`warmed up (page ${res.status}, ${set.length} cookies)`);
+  warmed = true;
+  console.log(dim(`warmed up (page ${res.status}, ${set.length} cookies)`));
 }
 
 // Extra headers the browser sends with this request, as JSON in the
@@ -41,21 +48,40 @@ const EXTRA_HEADERS = JSON.parse(process.env.DUO_EXTRA_HEADERS || "{}");
 
 const keyOf = (store, part) => `${store}|${part}`;
 
-function availableKeys(rows) {
-  const keys = new Set();
-  for (const r of rows) for (const m of MODELS) if (r.parts[m.part]?.available) keys.add(keyOf(r.name, m.part));
-  return keys;
+// "256GB Star White at Irvine Spectrum" for each model in stock, keyed "store|part".
+function inStock(rows) {
+  const hits = new Map();
+  for (const r of rows) {
+    for (const m of MODELS) if (r.parts[m.part]?.available) hits.set(keyOf(r.name, m.part), `${m.name} at ${r.name}`);
+  }
+  return hits;
 }
 
-function logRows(rows, now) {
-  const found = rows.flatMap((r) =>
-    MODELS.filter((m) => r.parts[m.part]?.available).map((m) => `${m.name} at ${r.name}`)
-  );
+const availableKeys = (rows) => new Set(inStock(rows).keys());
+
+// A big bright block, so stock stands out from the dim lines at a glance.
+function stockBox(labels, time) {
+  const lines = ["", `IN STOCK   ${time}`, "", ...labels, ""].map((l) => `   ${l}`);
+  const width = Math.min(Math.max(44, ...lines.map((l) => l.length + 3)), process.stdout.columns || Infinity);
+  // 256-color black on green: plain bold black turns gray in many terminals
+  return lines.map((l) => style("1;38;5;16;48;5;40", l.padEnd(width))).join("\n");
+}
+
+// A dim line when nothing is in stock, the block while something is, and an
+// orange "gone" line for each sell-out. Returns what is in stock now.
+function logRows(rows, now, before) {
+  const time = now.toLocaleTimeString();
+  const hits = inStock(rows);
   const missing = rows.filter((r) => !r.found).map((r) => r.name);
-  console.log(
-    `[${now.toLocaleTimeString()}] ${found.length ? "AVAILABLE: " + found.join(", ") : `nothing yet (${rows.length - missing.length} stores checked)`}` +
-      (missing.length ? `; not in Apple's list: ${missing.join(", ")}` : "")
-  );
+  const note = missing.length ? `not in Apple's list: ${missing.join(", ")}` : "";
+  for (const [key, label] of before) if (!hits.has(key)) console.log(style("1;38;5;166", `[${time}] gone: ${label}`));
+  if (hits.size) {
+    console.log(stockBox([...hits.values()], time));
+    if (note) console.log(dim(note));
+  } else {
+    console.log(dim(`[${time}] nothing yet (${rows.length - missing.length} stores checked)${note && `; ${note}`}`));
+  }
+  return hits;
 }
 
 // Undo claims whose push failed, so the next check tries again. Warning only.
@@ -92,6 +118,7 @@ async function pingKeys(keys, rows) {
 function createWatcher({ api, now = () => new Date() }) {
   const offline = new Map(); // "store|part" -> ISO time of the offline ping
   let lastKnown = new Set(); // claimed at the last good read; forgotten on sell-out
+  let shown = new Map(); // in stock at Apple's last answer, as logged
   let warned = false;
 
   async function claim(rows, nowIso) {
@@ -125,7 +152,7 @@ function createWatcher({ api, now = () => new Date() }) {
 
   async function checkOnce(extraHeaders = {}) {
     const rows = await fetchRows(extraHeaders);
-    logRows(rows, now());
+    shown = logRows(rows, now(), shown);
     if (!api) return fromMemory(rows, new Error("no GitHub login"));
     const nowIso = now().toISOString();
     let result;
@@ -141,7 +168,7 @@ function createWatcher({ api, now = () => new Date() }) {
 }
 
 async function warmedHeaders() {
-  if (!cookies) await warmUp();
+  if (!warmed) await warmUp();
   return {
     "Sec-Fetch-Site": "same-origin",
     "Sec-Fetch-Mode": "cors",
@@ -158,7 +185,7 @@ async function loop(watcher) {
     try {
       await watcher.checkOnce(await warmedHeaders());
     } catch (e) {
-      if (e.blocked) cookies = ""; // get a fresh session next time
+      if (e.blocked) [cookies, warmed] = ["", false]; // get a fresh session next time
       throw e;
     }
     blockedStreak = 0;

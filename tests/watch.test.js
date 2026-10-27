@@ -238,3 +238,24 @@ test("failed offline push is retried after a read failure", async () => {
   await check(w);
   assert.equal(up.pushes.length, 1);
 });
+
+test("nothing in stock is one quiet line; stock is a block naming model and store", async () => {
+  const w = start();
+  const quiet = await check(w);
+  assert.match(quiet, /\] nothing yet \(4 stores checked\)\n$/);
+  stock(W256);
+  const text = (await check(w)).slice(quiet.length);
+  assert.match(text, /IN STOCK {3}\d/);
+  assert.match(text, /256GB Star White at Irvine Spectrum/);
+  assert.doesNotMatch(text, /nothing yet/);
+});
+
+test("a sell-out prints a gone line once", async () => {
+  const w = start();
+  stock(W256);
+  await check(w);
+  stock();
+  await check(w);
+  await check(w);
+  assert.equal(ctx.con.text().match(/\] gone: 256GB Star White at Irvine Spectrum/g).length, 1);
+});
