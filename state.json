@@ -85,5 +85,19 @@
       }
     ]
   },
-  "restocks": []
+  "restocks": [
+    {
+      "store": "Los Cerritos",
+      "parts": {
+        "MK1E4LL/A": {
+          "in": "2026-10-27T04:27:52.319Z",
+          "out": null
+        },
+        "MK1F4LL/A": {
+          "in": "2026-10-27T04:27:52.319Z",
+          "out": null
+        }
+      }
+    }
+  ]
 }
