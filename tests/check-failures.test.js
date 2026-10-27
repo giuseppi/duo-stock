@@ -141,7 +141,7 @@ test("without NTFY_TOPIC nothing is sent and nothing crashes", async () => {
   const topic = process.env.NTFY_TOPIC;
   delete process.env.NTFY_TOPIC;
   try {
-    ctx.apple = appleSays({ "Los Cerritos": [W256] });
+    ctx.apple = appleSays({ "Mission Viejo": [W256] });
     const { record, logs } = await ctx.run();
     assert.equal(ctx.pushes.length, 0);
     assert.match(logs, /NTFY_TOPIC not set, push skipped/);

@@ -151,10 +151,11 @@ function logEntry(r) {
   };
 }
 
-// The record keeps parts of models no longer in MODELS; History shows only watched ones.
+// The record keeps models and stores no longer watched; History shows only watched ones.
 function watchedOnly(restocks) {
   const watched = new Set(MODELS.map((m) => m.part));
   return restocks
+    .filter((r) => STORES.includes(r.store))
     .map((r) => ({ ...r, parts: Object.fromEntries(Object.entries(r.parts).filter(([part]) => watched.has(part))) }))
     .filter((r) => Object.keys(r.parts).length);
 }

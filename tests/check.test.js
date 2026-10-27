@@ -35,11 +35,10 @@ test("first run, no state.json, one model in stock: one push naming model and st
   assert.deepEqual(status.models.map((m) => m.part), [W256]);
   assert.deepEqual(status.stores.map((s) => s.name), [
     "Irvine Spectrum", "South Coast Plaza", "Mission Viejo", "Fashion Island",
-    "Brea Mall", "Los Cerritos", "Victoria Gardens",
   ]);
   assert.deepEqual(cell(status, "Irvine Spectrum", W256), { available: true, quote: "Available Today" });
   assert.equal(cell(status, "South Coast Plaza", W256).available, false);
-  assert.equal(status.stores.find((s) => s.name === "Victoria Gardens").miles, 31.01);
+  assert.equal(status.stores.find((s) => s.name === "Fashion Island").miles, 10.01);
 });
 
 test("first run creates state.json with no sha", async () => {
@@ -58,7 +57,7 @@ test("first run with nothing in stock: no push, nothing open", async () => {
 });
 
 test("same stock again: no repeat push, state.json byte-for-byte unchanged", async () => {
-  ctx.apple = appleSays({ "Irvine Spectrum Center": [W256], "Brea Mall": [W256] });
+  ctx.apple = appleSays({ "Irvine Spectrum Center": [W256], "South Coast Plaza": [W256] });
   const first = await ctx.run();
   assert.equal(ctx.pushes.length, 1);
   const second = await ctx.run();
@@ -75,14 +74,14 @@ test("no change means no write", async () => {
 });
 
 test("two stores at once: one push naming both", async () => {
-  ctx.apple = appleSays({ "Irvine Spectrum Center": [W256], "Brea Mall": [W256] });
+  ctx.apple = appleSays({ "Irvine Spectrum Center": [W256], "South Coast Plaza": [W256] });
   const { record } = await ctx.run();
   assert.deepEqual(
     ctx.pushes.map((p) => [p.title, p.click]),
-    [["256GB Star White at Irvine Spectrum, Brea Mall", `${BUY}256gb-star-white-unlocked`]]
+    [["256GB Star White at Irvine Spectrum, South Coast Plaza", `${BUY}256gb-star-white-unlocked`]]
   );
-  assert.equal(ctx.pushes[0].body, "Irvine Spectrum (Irvine): Available Today\nBrea Mall (Brea): Available Today");
-  assert.deepEqual(openKeys(record), ["Brea Mall|MK1E4LL/A", "Irvine Spectrum|MK1E4LL/A"]);
+  assert.equal(ctx.pushes[0].body, "Irvine Spectrum (Irvine): Available Today\nSouth Coast Plaza (Costa Mesa): Available Today");
+  assert.deepEqual(openKeys(record), ["Irvine Spectrum|MK1E4LL/A", "South Coast Plaza|MK1E4LL/A"]);
 });
 
 test("other colors and sizes never ping or get recorded", async () => {
@@ -130,28 +129,28 @@ test("back after 11 minutes pings again", async () => {
   assert.equal(ctx.pushes.length, 1);
 });
 
-test("a store outside the 7 is ignored", async () => {
-  ctx.apple = appleSays({ "Del Amo": [W256, N256, W512, N512], "Pasadena": [N512] });
+test("a store outside the 4 is ignored, nearby ones included", async () => {
+  ctx.apple = appleSays({ "Brea Mall": [W256], "Los Cerritos": [W256], "Del Amo": [W256, N256, W512, N512] });
   const { record, status } = await ctx.run();
   assert.equal(ctx.pushes.length, 0);
-  assert.deepEqual(openKeys(record), []);
-  assert.ok(!status.stores.some((s) => s.name === "Del Amo" || s.name === "Pasadena"));
+  assert.deepEqual(record.restocks, []);
+  assert.ok(!status.stores.some((s) => ["Brea Mall", "Los Cerritos", "Del Amo"].includes(s.name)));
 });
 
 test("a watched store missing from Apple's answer is unknown, and its stock memory is kept", async () => {
-  ctx.apple = appleSays({ "Victoria Gardens": [W256] });
+  ctx.apple = appleSays({ "Fashion Island": [W256] });
   await ctx.run();
   assert.equal(ctx.pushes.length, 1);
 
-  ctx.apple = appleSays({}, APPLE_STORES.filter(([n]) => n !== "Victoria Gardens"));
+  ctx.apple = appleSays({}, APPLE_STORES.filter(([n]) => n !== "Fashion Island"));
   const { record, status } = await ctx.run();
-  const vg = status.stores.find((s) => s.name === "Victoria Gardens");
+  const fi = status.stores.find((s) => s.name === "Fashion Island");
   assert.equal(status.ok, true);
-  assert.equal(vg.found, false);
-  assert.equal(vg.parts[W256], null);
-  assert.deepEqual(openKeys(record), ["Victoria Gardens|MK1E4LL/A"]);
+  assert.equal(fi.found, false);
+  assert.equal(fi.parts[W256], null);
+  assert.deepEqual(openKeys(record), ["Fashion Island|MK1E4LL/A"]);
 
-  ctx.apple = appleSays({ "Victoria Gardens": [W256] });
+  ctx.apple = appleSays({ "Fashion Island": [W256] });
   await ctx.run();
   assert.equal(ctx.pushes.length, 0, "no repeat push when it reappears still in stock");
 });
@@ -181,6 +180,6 @@ test("v1 state.json is migrated without re-pinging", async () => {
 
 test("status.json carries the history summary", async () => {
   const { status } = await ctx.run();
-  assert.equal(status.history.grid.length, 7);
+  assert.equal(status.history.grid.length, 4);
   assert.ok(fs.existsSync("status.json"));
 });

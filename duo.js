@@ -8,17 +8,8 @@ const buyPage = (slug) =>
 
 const MODELS = [{ part: "MK1E4LL/A", name: "256GB Star White", buy: buyPage("256gb-star-white") }];
 
-// Matched against Apple's storeName. By name, not distance: Victoria Gardens
-// is ~31 mi from ZIP.
-const STORES = [
-  "Irvine Spectrum",
-  "South Coast Plaza",
-  "Mission Viejo",
-  "Fashion Island",
-  "Brea Mall",
-  "Los Cerritos",
-  "Victoria Gardens",
-];
+// Matched by name against the storeName of each store Apple lists near ZIP.
+const STORES = ["Irvine Spectrum", "South Coast Plaza", "Mission Viejo", "Fashion Island"];
 
 // Apple's old fulfillment-messages endpoint returns 541 for everyone (even
 // Apple's own page). This retail pickup endpoint works, even without cookies.
