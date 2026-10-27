@@ -21,6 +21,15 @@ Models and stores live in `duo.js`.
 4. Push these files.
 5. Actions tab > "Check iPhone Duo stock" > Run workflow, to test it right
    away instead of waiting for the schedule.
+6. Add an outside timer, because GitHub's own schedule is unreliable (it once
+   went over 2 hours without a run). Make a fine-grained token limited to this
+   repo with only **Actions: Read and write**. Then make a free cron-job.org
+   job that runs every 5 minutes and POSTs `{"ref":"main"}` to
+   `https://api.github.com/repos/<you>/duo-stock/actions/workflows/check.yml/dispatches`
+   with the headers `Authorization: Bearer <token>`,
+   `Accept: application/vnd.github+json`, `X-GitHub-Api-Version: 2022-11-28`
+   and `Content-Type: application/json`. A test run should answer HTTP 204.
+   The token expires, so renew it before then or the timer stops.
 
 Both GitHub Actions and your laptop (if you run it) share one record,
 `state.json` on GitHub. They read and write it through the GitHub API, and only
