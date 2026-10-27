@@ -11,8 +11,8 @@ const TOPIC = "fake-topic-for-tests-7q2x";
 const TOKEN = "gho_fake_laptop_token";
 const API = { repo: "giuseppi/duo-stock", token: TOKEN, branch: "main" };
 const IRVINE = "Irvine Spectrum";
-const N512 = "MK1H4LL/A";
-const KEY = `${IRVINE}|${N512}`;
+const W256 = "MK1E4LL/A";
+const KEY = `${IRVINE}|${W256}`;
 const T0 = Date.parse("2026-10-26T18:00:00.000Z");
 
 process.env.NTFY_TOPIC = TOPIC;
@@ -47,10 +47,10 @@ async function check(watcher) {
 
 test("new stock: claim, one push, one dispatch", async () => {
   const w = start();
-  stock(N512);
+  stock(W256);
   await check(w);
   assert.equal(ctx.pushes.length, 1);
-  assert.equal(ctx.pushes[0].title, "512GB Night Sky at Irvine Spectrum");
+  assert.equal(ctx.pushes[0].title, "256GB Star White at Irvine Spectrum");
   assert.deepEqual([...claimedKeys(ctx.gh.file())], [KEY]);
   assert.equal(ctx.gh.puts.length, 1);
   assert.equal(ctx.gh.dispatches, 1);
@@ -58,7 +58,7 @@ test("new stock: claim, one push, one dispatch", async () => {
 
 test("already claimed by GitHub: no push, no write, no dispatch", async () => {
   const w = start();
-  stock(N512);
+  stock(W256);
   await check(w);
   const [puts, dispatches] = [ctx.gh.puts.length, ctx.gh.dispatches];
   await check(start()); // a fresh laptop session reads the same record
@@ -69,7 +69,7 @@ test("already claimed by GitHub: no push, no write, no dispatch", async () => {
 
 test("nothing changed: no write, no dispatch", async () => {
   const w = start();
-  stock(N512);
+  stock(W256);
   await check(w);
   ctx.pushes.length = 0;
   const puts = ctx.gh.puts.length;
@@ -81,7 +81,7 @@ test("nothing changed: no write, no dispatch", async () => {
 
 test("GitHub down: pings from memory once", async () => {
   const w = start();
-  stock(N512);
+  stock(W256);
   ctx.gh.failNext("GET", 500, 2);
   const text = await check(w);
   assert.equal(ctx.pushes.length, 1);
@@ -93,7 +93,7 @@ test("GitHub down: pings from memory once", async () => {
 
 test("the unreachable warning prints once per outage, again for a later one", async () => {
   const w = start();
-  stock(N512);
+  stock(W256);
   ctx.gh.failNext("GET", 500, 2);
   await check(w);
   await check(w);
@@ -106,7 +106,7 @@ test("the unreachable warning prints once per outage, again for a later one", as
 
 test("expired login (401) falls back and names the status", async () => {
   const w = start();
-  stock(N512);
+  stock(W256);
   ctx.gh.failNext("GET", 401, 1);
   const text = await check(w);
   assert.match(text, /HTTP 401/);
@@ -115,7 +115,7 @@ test("expired login (401) falls back and names the status", async () => {
 
 test("invalid JSON on GitHub: falls back, never writes", async () => {
   const w = start();
-  stock(N512);
+  stock(W256);
   ctx.gh.setRaw("{ nope");
   const text = await check(w);
   assert.match(text, /not valid JSON/);
@@ -125,7 +125,7 @@ test("invalid JSON on GitHub: falls back, never writes", async () => {
 
 test("a write that fails after deciding still pings once", async () => {
   const w = start();
-  stock(N512);
+  stock(W256);
   ctx.gh.failNext("PUT", 500, 2);
   await check(w);
   assert.equal(ctx.pushes.length, 1);
@@ -136,7 +136,7 @@ test("a write that fails after deciding still pings once", async () => {
 
 test("a failed push is not remembered, so the next check retries it", async () => {
   const w = start();
-  stock(N512);
+  stock(W256);
   ctx.gh.failNext("GET", 500, 2);
   installFetch({ apple: () => ctx.apple, github: ctx.gh, ntfyUp: false });
   await check(w);
@@ -149,7 +149,7 @@ test("a failed push is not remembered, so the next check retries it", async () =
 
 test("a failed dispatch is a warning only", async () => {
   const w = start();
-  stock(N512);
+  stock(W256);
   ctx.gh.failNext("POST", 500, 1);
   const text = await check(w);
   assert.equal(ctx.pushes.length, 1);
@@ -158,7 +158,7 @@ test("a failed dispatch is a warning only", async () => {
 
 test("a failed push is unclaimed so the next check tries again", async () => {
   const w = start();
-  stock(N512);
+  stock(W256);
   installFetch({ apple: () => ctx.apple, github: ctx.gh, ntfyUp: false });
   await check(w);
   assert.deepEqual([...claimedKeys(ctx.gh.file())], []);
@@ -169,7 +169,7 @@ test("a failed push is unclaimed so the next check tries again", async () => {
 
 test("reconnect hands over still-in-stock pings", async () => {
   const w = start();
-  stock(N512);
+  stock(W256);
   ctx.gh.failNext("GET", 500, 1);
   await check(w);
   assert.equal(ctx.pushes.length, 1);
@@ -177,14 +177,14 @@ test("reconnect hands over still-in-stock pings", async () => {
   await check(w);
   assert.equal(ctx.pushes.length, 1);
   const rec = ctx.gh.file();
-  assert.equal(rec.restocks[0].parts[N512].in, new Date(T0).toISOString());
+  assert.equal(rec.restocks[0].parts[W256].in, new Date(T0).toISOString());
   assert.equal(w.offline.size, 0);
   assert.equal(ctx.gh.dispatches, 1);
 });
 
 test("offline restock that sold out is not backfilled", async () => {
   const w = start();
-  stock(N512);
+  stock(W256);
   ctx.gh.failNext("GET", 500, 1);
   await check(w);
   stock();
@@ -197,7 +197,7 @@ test("offline restock that sold out is not backfilled", async () => {
 
 test("no api at all behaves like GitHub down", async () => {
   const w = start(null);
-  stock(N512);
+  stock(W256);
   const text = await check(w);
   assert.equal(ctx.pushes.length, 1);
   assert.match(text, /GitHub unreachable/);
@@ -208,12 +208,12 @@ test("no api at all behaves like GitHub down", async () => {
 
 test("sold out and back during an outage pings again", async () => {
   const w = start();
-  stock(N512);
+  stock(W256);
   await check(w); // GitHub claims it and the laptop pings
   ctx.gh.failNext("GET", 500, 2);
   stock();
   await check(w);
-  stock(N512);
+  stock(W256);
   const net = installFetch({ apple: () => ctx.apple, github: ctx.gh });
   await check(w);
   assert.equal(net.pushes.length, 1);
@@ -221,11 +221,11 @@ test("sold out and back during an outage pings again", async () => {
 
 test("failed offline push is retried after a read failure", async () => {
   const w = start();
-  stock(N512);
+  stock(W256);
   await check(w);
   // Meanwhile GitHub's own check recorded the sell-out.
   const rec = ctx.gh.file();
-  rec.restocks[0].parts[N512].out = new Date(T0 + 1000).toISOString();
+  rec.restocks[0].parts[W256].out = new Date(T0 + 1000).toISOString();
   ctx.gh.setFile(rec);
   ctx.clock = T0 + 30 * 60 * 1000;
   ctx.gh.failNext("PUT", 500, 1);

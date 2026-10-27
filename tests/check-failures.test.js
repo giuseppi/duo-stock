@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("fs");
 const { main } = require("../check");
 const { APPLE_STORES, captureConsole } = require("./fakes");
-const { setup, cell, openKeys, N256, N512, W256, appleSays } = require("./check-harness");
+const { setup, cell, openKeys, W256, appleSays } = require("./check-harness");
 
 const ctx = setup();
 
@@ -15,10 +15,10 @@ function assertStatusError(pattern) {
   assert.equal(status.ok, false);
   assert.match(status.error, pattern);
 }
-const VERIFIED_KEY = "Irvine Spectrum|MK1H4LL/A";
+const VERIFIED_KEY = "Irvine Spectrum|MK1E4LL/A";
 
 test("failure streak: one 'failing' push at 6, quiet after, then one 'back' push and no repeat stock push", async () => {
-  ctx.apple = appleSays({ "Irvine Spectrum Center": [N512] });
+  ctx.apple = appleSays({ "Irvine Spectrum Center": [W256] });
   await ctx.run();
   assert.equal(ctx.pushes.length, 1);
 
@@ -30,7 +30,7 @@ test("failure streak: one 'failing' push at 6, quiet after, then one 'back' push
     assert.deepEqual(openKeys(record), [VERIFIED_KEY], "stock memory kept through failures");
     assert.equal(status.ok, false);
     assert.equal(status.error, "Apple blocked the request (HTTP 541)");
-    assert.equal(cell(status, "Irvine Spectrum", N512), null, "stock is unknown while failing");
+    assert.equal(cell(status, "Irvine Spectrum", W256), null, "stock is unknown while failing");
   }
   const sixth = await ctx.run();
   assert.deepEqual(ctx.pushes.map((p) => [p.title, p.priority]), [["Duo checker is failing", "default"]]);
@@ -45,7 +45,7 @@ test("failure streak: one 'failing' push at 6, quiet after, then one 'back' push
   }
   assert.equal(ctx.gh.puts.length, writes, "a long outage makes no writes");
 
-  ctx.apple = appleSays({ "Irvine Spectrum Center": [N512] });
+  ctx.apple = appleSays({ "Irvine Spectrum Center": [W256] });
   const back = await ctx.run();
   assert.deepEqual(ctx.pushes.map((p) => [p.title, p.priority]), [["Duo checker is back", "default"]]);
   assert.equal(back.record.failStreak, 0);
@@ -98,7 +98,7 @@ test("a response with no stores, or none of ours, counts as a failure", async ()
 });
 
 test("if the ntfy push fails, the hit isn't remembered, so the next run retries it", async () => {
-  ctx.apple = appleSays({ "South Coast Plaza": [N256] });
+  ctx.apple = appleSays({ "South Coast Plaza": [W256] });
   ctx.ntfyUp = false;
   const failed = await ctx.run();
   assert.equal(ctx.pushes.length, 1);
@@ -107,8 +107,8 @@ test("if the ntfy push fails, the hit isn't remembered, so the next run retries 
 
   ctx.ntfyUp = true;
   const retried = await ctx.run();
-  assert.deepEqual(ctx.pushes.map((p) => p.title), ["256GB Night Sky at South Coast Plaza"]);
-  assert.deepEqual(openKeys(retried.record), ["South Coast Plaza|MK1F4LL/A"]);
+  assert.deepEqual(ctx.pushes.map((p) => p.title), ["256GB Star White at South Coast Plaza"]);
+  assert.deepEqual(openKeys(retried.record), ["South Coast Plaza|MK1E4LL/A"]);
 });
 
 test("a failed push undoes its claim", async () => {
@@ -141,7 +141,7 @@ test("without NTFY_TOPIC nothing is sent and nothing crashes", async () => {
   const topic = process.env.NTFY_TOPIC;
   delete process.env.NTFY_TOPIC;
   try {
-    ctx.apple = appleSays({ "Los Cerritos": [N512] });
+    ctx.apple = appleSays({ "Los Cerritos": [W256] });
     const { record, logs } = await ctx.run();
     assert.equal(ctx.pushes.length, 0);
     assert.match(logs, /NTFY_TOPIC not set, push skipped/);
@@ -152,7 +152,7 @@ test("without NTFY_TOPIC nothing is sent and nothing crashes", async () => {
 });
 
 test("GitHub unreadable: no pushes and the run fails", async () => {
-  ctx.apple = appleSays({ "Irvine Spectrum Center": [N512] });
+  ctx.apple = appleSays({ "Irvine Spectrum Center": [W256] });
   ctx.gh.failNext("GET", 500);
   await assert.rejects(ctx.run());
   assert.equal(ctx.pushes.length, 0);
@@ -161,11 +161,11 @@ test("GitHub unreadable: no pushes and the run fails", async () => {
 });
 
 test("GitHub unwritable: pushes go out and the run fails", async () => {
-  ctx.apple = appleSays({ "Irvine Spectrum Center": [N512] });
+  ctx.apple = appleSays({ "Irvine Spectrum Center": [W256] });
   ctx.gh.failNext("PUT", 500, 5);
   await assert.rejects(ctx.run());
   assert.equal(ctx.pushes.length, 1);
-  assert.equal(ctx.pushes[0].title, "512GB Night Sky at Irvine Spectrum");
+  assert.equal(ctx.pushes[0].title, "256GB Star White at Irvine Spectrum");
   assertStatusError(/GitHub API PUT .* answered HTTP 500/);
 });
 

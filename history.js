@@ -151,7 +151,16 @@ function logEntry(r) {
   };
 }
 
-function summarize(record) {
+// The record keeps parts of models no longer in MODELS; History shows only watched ones.
+function watchedOnly(restocks) {
+  const watched = new Set(MODELS.map((m) => m.part));
+  return restocks
+    .map((r) => ({ ...r, parts: Object.fromEntries(Object.entries(r.parts).filter(([part]) => watched.has(part))) }))
+    .filter((r) => Object.keys(r.parts).length);
+}
+
+function summarize(full) {
+  const record = { ...full, restocks: watchedOnly(full.restocks) };
   const restocks = record.restocks;
   const count = restocks.length;
   // Array order is not start order: an offline sighting is appended late.

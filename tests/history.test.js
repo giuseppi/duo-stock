@@ -164,17 +164,27 @@ test("grid counts by window and sorts", () => {
 });
 
 test("log is newest first", () => {
-  const rows = [rs(IRV, 26, 8, 0, 10), rs(SCP, 27, 9, 0, null, [E, H])];
-  rows[1].parts[E].out = "2026-10-27T17:00:00.000Z";
-  const { log } = summarize(rec(rows));
+  const { log } = summarize(rec([rs(IRV, 26, 8, 0, 10), rs(SCP, 27, 9, 0, null)]));
   assert.equal(log[0].store, SCP);
   assert.equal(log[0].lasted, "still in stock");
   assert.equal(log[0].open, true);
   assert.equal(log[0].minutes, null);
-  assert.equal(log[0].models, "256GB Star White, 512GB Night Sky");
+  assert.equal(log[0].models, "256GB Star White");
   assert.equal(log[1].when, "Mon Oct 26, 8:00 AM");
   assert.equal(log[1].lasted, "lasted ~10 min");
   assert.equal(log[1].minutes, 10);
+});
+
+test("models no longer watched are left out of counts, times and the log", () => {
+  const both = rs(IRV, 27, 9, 0, 2, [E, H]);
+  both.parts[H].out = new Date(Date.parse(both.parts[H].in) + 30 * 60000).toISOString(); // outlasted E
+  const onlyH = rs(SCP, 27, 8, 0, null, [H]);
+  const s = summarize(rec([both, onlyH]));
+  assert.equal(s.count, 1);
+  assert.equal(s.grid.find((g) => g.store === SCP).total, 0);
+  assert.equal(s.log.length, 1);
+  assert.equal(s.log[0].models, "256GB Star White");
+  assert.equal(s.log[0].lasted, "lasted ~2 min");
 });
 
 test("duration across the DST change is real time", () => {

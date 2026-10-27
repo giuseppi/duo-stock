@@ -6,12 +6,7 @@ const ZIP = "92618";
 const buyPage = (slug) =>
   `https://www.apple.com/shop/buy-iphone/iphone-duo/7.6-inch-display-${slug}-unlocked`;
 
-const MODELS = [
-  { part: "MK1E4LL/A", name: "256GB Star White", buy: buyPage("256gb-star-white") },
-  { part: "MK1F4LL/A", name: "256GB Night Sky", buy: buyPage("256gb-night-sky") },
-  { part: "MK1G4LL/A", name: "512GB Star White", buy: buyPage("512gb-star-white") },
-  { part: "MK1H4LL/A", name: "512GB Night Sky", buy: buyPage("512gb-night-sky") },
-];
+const MODELS = [{ part: "MK1E4LL/A", name: "256GB Star White", buy: buyPage("256gb-star-white") }];
 
 // Matched against Apple's storeName. By name, not distance: Victoria Gardens
 // is ~31 mi from ZIP.

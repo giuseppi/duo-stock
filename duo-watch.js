@@ -190,7 +190,7 @@ function start() {
   }
   if (!NTFY_TOPIC) console.warn("NTFY_TOPIC not set, alerts will only print to the terminal.");
   console.log(
-    `Watching ${MODELS.length} models at ${STORES.length} stores every ~${INTERVAL_SEC}s` +
+    `Watching ${MODELS.map((m) => m.name).join(", ")} at ${STORES.length} stores every ~${INTERVAL_SEC}s` +
       (NTFY_TOPIC ? ", alerts to your ntfy topic" : "")
   );
   const watcher = createWatcher({ api });

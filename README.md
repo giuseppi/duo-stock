@@ -1,10 +1,9 @@
 # duo-stock
 
-Watches Apple in-store pickup stock for the iPhone Duo 256GB and 512GB in Star
-White and Night Sky (MK1E4LL/A, MK1F4LL/A, MK1G4LL/A, MK1H4LL/A) at Irvine
-Spectrum, South Coast Plaza, Mission Viejo, Fashion Island, Brea Mall, Los
-Cerritos and Victoria Gardens. Pushes to ntfy when one comes in stock, and
-publishes a status grid to GitHub Pages.
+Watches Apple in-store pickup stock for the iPhone Duo 256GB in Star White
+(MK1E4LL/A) at Irvine Spectrum, South Coast Plaza, Mission Viejo, Fashion
+Island, Brea Mall, Los Cerritos and Victoria Gardens. Pushes to ntfy when it
+comes in stock, and publishes a status grid to GitHub Pages.
 
 Models and stores live in `duo.js`.
 
