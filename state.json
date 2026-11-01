@@ -49,14 +49,10 @@
     "Brea Mall": [
       {
         "storeDays": "Sun",
-        "storeTimings": "11:00 AM-7:00 PM"
+        "storeTimings": "11:00 AM-8:00 PM"
       },
       {
-        "storeDays": "Mon-Thu",
-        "storeTimings": "10:00 AM-8:00 PM"
-      },
-      {
-        "storeDays": "Fri-Sat",
+        "storeDays": "Mon-Sat",
         "storeTimings": "10:00 AM-9:00 PM"
       }
     ],
