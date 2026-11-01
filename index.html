@@ -32,11 +32,7 @@
   th a:hover { text-decoration:underline; }
   th:first-child, td:first-child { width:36%; text-align:left; padding-left:14px; }
   .store { font-size:15px; }
-  .city { color:var(--muted); font-size:12px; overflow:hidden; }
-  /* "City · 10 mi": every part starts with a dot, and the dot that would start a line is clipped */
-  .city > div { display:flex; flex-wrap:wrap; margin-left:-1em; }
-  .city span { position:relative; padding-left:1em; }
-  .city span::before { content:"·"; position:absolute; left:0; width:1em; text-align:center; }
+  .city { color:var(--muted); font-size:12px; }
   .in { display:inline-block; padding:2px 9px; border-radius:999px; background:var(--yesbg); color:var(--yes); font-weight:600; }
   .no, .unk { color:var(--no); }
   .foot { color:var(--muted); font-size:13px; margin-top:16px; }
@@ -62,7 +58,7 @@
   .bar { height:6px; margin-top:8px; border-radius:3px; background:var(--h2); }
   .more { width:100%; padding:10px; border:1px solid var(--line); border-radius:12px; background:var(--card); color:var(--text); font:inherit; font-size:14px; }
   @media (max-width:420px) {
-    th:first-child, td:first-child { width:60%; padding-left:12px; }
+    th:first-child, td:first-child { width:50%; padding-left:12px; }
     .store { font-size:14px; }
     .heat th:first-child, .heat td:first-child { width:28%; }
   }
@@ -81,7 +77,7 @@
     </table>
     <div class="foot">
       Checks run on GitHub about every 5 minutes. Push alerts go out through ntfy.
-      The model name links to its buy page.
+      Model names link to their buy pages.
     </div>
   </div>
   <div id="hist" hidden></div>
@@ -131,8 +127,11 @@ function render(s, note) {
   document.getElementById("checked").textContent =
     "Last check " + ago(s.checkedAt) + " (" + new Date(s.checkedAt).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" }) + ")" + note;
 
-  const hits = [];
-  for (const m of s.models) for (const r of s.stores) if (r.parts[m.part]?.available) hits.push(`${m.name} at ${r.name}`);
+  // One line per hit, the store name kept whole
+  let hitLines = "";
+  for (const m of s.models) for (const r of s.stores) {
+    if (r.parts[m.part]?.available) hitLines += `<div>${esc(m.name)} at <span class="nw">${esc(r.name)}</span></div>`;
+  }
   let html = "";
   if (!s.ok) {
     html += banner("bad", "Last check failed: " + (s.error || "unknown error"),
@@ -142,7 +141,7 @@ function render(s, note) {
     html += banner("warn", "Checker looks stalled",
       `No check in over ${STALE_MIN} min. GitHub may be running the schedule late, or it stopped. Look at the Actions tab.`);
   }
-  if (s.ok) html += hits.length ? banner("yes", "In stock: " + hits.join("; ")) : banner("", "Not in stock anywhere you're watching");
+  if (s.ok) html += hitLines ? `<div class="banner yes">In stock:${hitLines}</div>` : banner("", "Not in stock anywhere you're watching");
   document.getElementById("banners").innerHTML = html;
 
   document.getElementById("head").innerHTML = "<th>Store</th>" + s.models.map((m) => {
@@ -150,9 +149,8 @@ function render(s, note) {
     return `<th><a href="${esc(m.buy)}">${esc(size)}<span>${esc(color.join(" "))}</span></a></th>`;
   }).join("");
   document.getElementById("rows").innerHTML = s.stores.map((r) => {
-    const where = !s.ok ? [r.city] : r.found ? [r.city, r.miles && Math.round(r.miles) + " mi"] : ["Not in Apple's list this time"];
-    const parts = where.filter(Boolean).map((p) => `<span>${esc(p)}</span>`).join("");
-    return `<tr><td><div class="store">${esc(r.name)}</div><div class="city"><div>${parts}</div></div></td>` +
+    const where = !s.ok || r.found ? r.city : "Not in Apple's list this time";
+    return `<tr><td><div class="store">${esc(r.name)}</div><div class="city">${esc(where)}</div></td>` +
       s.models.map((m) => cell(r.parts[m.part])).join("") + "</tr>";
   }).join("");
   document.getElementById("grid").hidden = false;

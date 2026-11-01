@@ -1,15 +1,29 @@
 // Shared by check.js (GitHub Actions) and duo-watch.js (laptop): what to
 // watch, how to ask Apple, and how to push new stock to ntfy.
 
+// Apple answers with only the 12 stores nearest this ZIP, so it must keep every
+// watched store among them. From Irvine the 7 below are the 7 nearest (2026-11-01).
 const ZIP = "92618";
 
 const buyPage = (slug) =>
   `https://www.apple.com/shop/buy-iphone/iphone-duo/7.6-inch-display-${slug}-unlocked`;
 
-const MODELS = [{ part: "MK1E4LL/A", name: "256GB Star White", buy: buyPage("256gb-star-white") }];
+const MODELS = [
+  { part: "MK1E4LL/A", name: "256GB Star White", buy: buyPage("256gb-star-white") },
+  { part: "MK1F4LL/A", name: "256GB Night Sky", buy: buyPage("256gb-night-sky") },
+];
 
-// Matched by name against the storeName of each store Apple lists near ZIP.
-const STORES = ["Irvine Spectrum", "South Coast Plaza", "Mission Viejo", "Fashion Island"];
+// Every store in Orange County, then Los Cerritos and Victoria Gardens.
+// Matched by name against Apple's storeName.
+const STORES = [
+  "Irvine Spectrum",
+  "South Coast Plaza",
+  "Mission Viejo",
+  "Fashion Island",
+  "Brea Mall",
+  "Los Cerritos",
+  "Victoria Gardens",
+];
 
 // Apple's old fulfillment-messages endpoint returns 541 for everyone (even
 // Apple's own page). This retail pickup endpoint works, even without cookies.
@@ -42,7 +56,6 @@ function toRows(apiStores) {
     return {
       name,
       city: s?.city || "",
-      miles: Number(s?.storedistance) || null,
       found: Boolean(s),
       hours: Array.isArray(hours)
         ? hours.map(({ storeDays, storeTimings }) => ({ storeDays, storeTimings }))

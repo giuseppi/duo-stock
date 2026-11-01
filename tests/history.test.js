@@ -74,7 +74,7 @@ test("no restocks", () => {
   assert.equal(s.basis, null);
   assert.equal(s.best, null);
   assert.equal(s.learning, "No restocks seen yet. This fills in as the checker spots them.");
-  assert.equal(s.grid.length, 4);
+  assert.equal(s.grid.length, 7);
   assert.ok(s.grid.every((g) => g.total === 0 && g.counts.length === 5 && g.counts.every((c) => c === 0)));
   assert.deepEqual(s.log, []);
 });
@@ -159,7 +159,7 @@ test("grid counts by window and sorts", () => {
   assert.equal(count, 5);
   assert.deepEqual(WINDOWS, ["12-6a", "6-9a", "9a-12", "12-5p", "5p-12"]);
   assert.deepEqual(grid[0], { store: IRV, counts: [0, 4, 1, 0, 0], total: 5 });
-  assert.deepEqual(grid.at(-1), { store: "Fashion Island", counts: [0, 0, 0, 0, 0], total: 0 });
+  assert.deepEqual(grid.at(-1), { store: "Victoria Gardens", counts: [0, 0, 0, 0, 0], total: 0 });
   assert.equal(grid[1].store, SCP);
 });
 
@@ -188,9 +188,11 @@ test("models no longer watched are left out of counts, times and the log", () =>
 });
 
 test("stores no longer watched are left out of counts, the grid and the log", () => {
-  const s = summarize(rec([rs("Brea Mall", 27, 9, 0, 2), rs("Los Cerritos", 27, 9, 30, 6), rs(IRV, 27, 9, 40, 1)]));
+  const s = summarize(rec([rs("Promenade Temecula", 27, 9, 0, 2), rs("El Paseo Village", 27, 9, 30, 6), rs(IRV, 27, 9, 40, 1)]));
   assert.equal(s.count, 1);
-  assert.deepEqual(s.grid.map((g) => g.store), [IRV, SCP, "Mission Viejo", "Fashion Island"]);
+  assert.deepEqual(s.grid.map((g) => g.store), [
+    IRV, SCP, "Mission Viejo", "Fashion Island", "Brea Mall", "Los Cerritos", "Victoria Gardens",
+  ]);
   assert.deepEqual(s.log.map((e) => e.store), [IRV]);
   assert.equal(s.basis, "Based on 1 restock seen since Oct 27.");
 });

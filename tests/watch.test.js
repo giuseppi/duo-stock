@@ -242,7 +242,7 @@ test("failed offline push is retried after a read failure", async () => {
 test("nothing in stock is one quiet line; stock is a block naming model and store", async () => {
   const w = start();
   const quiet = await check(w);
-  assert.match(quiet, /\] nothing yet \(4 stores checked\)\n$/);
+  assert.match(quiet, /\] nothing yet \(7 stores checked\)\n$/);
   stock(W256);
   const text = (await check(w)).slice(quiet.length);
   assert.match(text, /IN STOCK {3}\d/);

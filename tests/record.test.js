@@ -15,7 +15,7 @@ function row(name, avail = [], { unknown = [], found = true, hours = null } = {}
   for (const p of PARTS) {
     parts[p] = unknown.includes(p) ? null : { available: avail.includes(p), quote: "" };
   }
-  return { name, city: "", miles: null, found, hours, parts };
+  return { name, city: "", found, hours, parts };
 }
 const IRV = "Irvine Spectrum";
 const claim = (part, prevOut = null) => ({ store: IRV, part, prevOut });
