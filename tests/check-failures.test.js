@@ -91,7 +91,7 @@ test("HTTP 403 is reported as blocked too", async () => {
 test("a response with no stores, or none of ours, counts as a failure", async () => {
   ctx.apple = { body: {} };
   assert.equal((await ctx.run()).status.error, "no stores in Apple's response (Apple may have changed the format)");
-  ctx.apple = appleSays({}, APPLE_STORES.slice(7));
+  ctx.apple = appleSays({}, APPLE_STORES.slice(7).filter(([name]) => name !== "Pasadena"));
   const { record, status } = await ctx.run();
   assert.equal(status.error, "none of the watched stores are in Apple's response");
   assert.equal(record.failStreak, 2);

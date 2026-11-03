@@ -16,6 +16,7 @@ const REAL_HOURS = {
   "Brea Mall": [h("Sun", "11:00 AM-7:00 PM"), h("Mon-Thu", "10:00 AM-8:00 PM"), h("Fri-Sat", "10:00 AM-9:00 PM")],
   "Los Cerritos": [h("Sun", "11:00 AM-7:00 PM"), h("Mon-Sat", "10:00 AM-9:00 PM")],
   "Victoria Gardens": [h("Sun", "11:00 AM-7:00 PM"), h("Mon-Thu", "10:00 AM-8:00 PM"), h("Fri-Sat", "10:00 AM-9:00 PM")],
+  "Pasadena": [h("Mon-Thu, Sun", "10:00 AM-8:00 PM"), h("Fri-Sat", "10:00 AM-9:00 PM")],
 };
 
 // A restock starting at a Pacific (PDT, UTC-7) wall-clock time, lasting `min`
@@ -38,7 +39,7 @@ test("pacific uses Pacific time across the DST change", () => {
   assert.ok(!p.label.includes(" "));
 });
 
-test("parseHours reads all seven real stores", () => {
+test("parseHours reads all eight real stores", () => {
   const open = (store) => parseHours(REAL_HOURS[store]);
   assert.deepEqual(open(IRV), [600, 600, 600, 600, 600, 600, 600]);
   assert.deepEqual(open(SCP), [660, 600, 600, 600, 600, 600, 600]);
@@ -47,6 +48,7 @@ test("parseHours reads all seven real stores", () => {
   assert.deepEqual(open("Brea Mall"), [660, 600, 600, 600, 600, 600, 600]);
   assert.deepEqual(open("Los Cerritos"), [660, 600, 600, 600, 600, 600, 600]);
   assert.deepEqual(open("Victoria Gardens"), [660, 600, 600, 600, 600, 600, 600]);
+  assert.deepEqual(open("Pasadena"), [600, 600, 600, 600, 600, 600, 600]);
 });
 
 test("parseHours skips unknown formats", () => {
@@ -74,7 +76,7 @@ test("no restocks", () => {
   assert.equal(s.basis, null);
   assert.equal(s.best, null);
   assert.equal(s.learning, "No restocks seen yet. This fills in as the checker spots them.");
-  assert.equal(s.grid.length, 7);
+  assert.equal(s.grid.length, 8);
   assert.ok(s.grid.every((g) => g.total === 0 && g.counts.length === 5 && g.counts.every((c) => c === 0)));
   assert.deepEqual(s.log, []);
 });
@@ -159,7 +161,7 @@ test("grid counts by window and sorts", () => {
   assert.equal(count, 5);
   assert.deepEqual(WINDOWS, ["12-6a", "6-9a", "9a-12", "12-5p", "5p-12"]);
   assert.deepEqual(grid[0], { store: IRV, counts: [0, 4, 1, 0, 0], total: 5 });
-  assert.deepEqual(grid.at(-1), { store: "Victoria Gardens", counts: [0, 0, 0, 0, 0], total: 0 });
+  assert.deepEqual(grid.at(-1), { store: "Pasadena", counts: [0, 0, 0, 0, 0], total: 0 });
   assert.equal(grid[1].store, SCP);
 });
 
@@ -191,7 +193,7 @@ test("stores no longer watched are left out of counts, the grid and the log", ()
   const s = summarize(rec([rs("Promenade Temecula", 27, 9, 0, 2), rs("El Paseo Village", 27, 9, 30, 6), rs(IRV, 27, 9, 40, 1)]));
   assert.equal(s.count, 1);
   assert.deepEqual(s.grid.map((g) => g.store), [
-    IRV, SCP, "Mission Viejo", "Fashion Island", "Brea Mall", "Los Cerritos", "Victoria Gardens",
+    IRV, SCP, "Mission Viejo", "Fashion Island", "Brea Mall", "Los Cerritos", "Victoria Gardens", "Pasadena",
   ]);
   assert.deepEqual(s.log.map((e) => e.store), [IRV]);
   assert.equal(s.basis, "Based on 1 restock seen since Oct 27.");

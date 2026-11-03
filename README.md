@@ -3,8 +3,8 @@
 Watches Apple in-store pickup stock for the iPhone Duo 256GB in Star White
 (MK1E4LL/A) and Night Sky (MK1F4LL/A) at every Apple Store in Orange County
 (Irvine Spectrum, South Coast Plaza, Mission Viejo, Fashion Island, Brea Mall),
-plus Los Cerritos and Victoria Gardens. Pushes to ntfy when one comes in stock,
-and publishes a status grid to GitHub Pages.
+plus Los Cerritos, Victoria Gardens and Pasadena. Pushes to ntfy when one comes
+in stock, and publishes a status grid to GitHub Pages.
 
 Models and stores live in `duo.js`.
 

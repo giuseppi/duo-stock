@@ -2,7 +2,7 @@
 // watch, how to ask Apple, and how to push new stock to ntfy.
 
 // Apple answers with only the 12 stores nearest this ZIP, so it must keep every
-// watched store among them. From Irvine the 7 below are the 7 nearest (2026-11-01).
+// watched store among them. From Irvine the 8 below all are; Pasadena is 11th (2026-11-03).
 const ZIP = "92618";
 
 const buyPage = (slug) =>
@@ -13,7 +13,7 @@ const MODELS = [
   { part: "MK1F4LL/A", name: "256GB Night Sky", buy: buyPage("256gb-night-sky") },
 ];
 
-// Every store in Orange County, then Los Cerritos and Victoria Gardens.
+// Every store in Orange County, then Los Cerritos, Victoria Gardens and Pasadena.
 // Matched by name against Apple's storeName.
 const STORES = [
   "Irvine Spectrum",
@@ -23,6 +23,7 @@ const STORES = [
   "Brea Mall",
   "Los Cerritos",
   "Victoria Gardens",
+  "Pasadena",
 ];
 
 // Apple's old fulfillment-messages endpoint returns 541 for everyone (even

@@ -35,11 +35,12 @@ test("first run, no state.json, one model in stock: one push naming model and st
   assert.deepEqual(status.models.map((m) => m.part), [W256, N256]);
   assert.deepEqual(status.stores.map((s) => s.name), [
     "Irvine Spectrum", "South Coast Plaza", "Mission Viejo", "Fashion Island",
-    "Brea Mall", "Los Cerritos", "Victoria Gardens",
+    "Brea Mall", "Los Cerritos", "Victoria Gardens", "Pasadena",
   ]);
   assert.deepEqual(cell(status, "Irvine Spectrum", W256), { available: true, quote: "Available Today" });
   assert.equal(cell(status, "Irvine Spectrum", N256).available, false);
   assert.equal(status.stores.find((s) => s.name === "Los Cerritos").city, "Cerritos");
+  assert.equal(status.stores.find((s) => s.name === "Pasadena").city, "Pasadena");
 });
 
 test("first run creates state.json with no sha", async () => {
@@ -145,12 +146,12 @@ test("back after 11 minutes pings again", async () => {
   assert.equal(ctx.pushes.length, 1);
 });
 
-test("a store outside the 7 is ignored, nearby ones included", async () => {
-  ctx.apple = appleSays({ "Promenade Temecula": [W256, N256], "Del Amo": [W256], "Pasadena": [N256] });
+test("a store outside the 8 is ignored, nearby ones included", async () => {
+  ctx.apple = appleSays({ "Promenade Temecula": [W256, N256], "Del Amo": [W256], "Tower Theatre": [N256] });
   const { record, status } = await ctx.run();
   assert.equal(ctx.pushes.length, 0);
   assert.deepEqual(record.restocks, []);
-  assert.ok(!status.stores.some((s) => ["Promenade Temecula", "Del Amo", "Pasadena"].includes(s.name)));
+  assert.ok(!status.stores.some((s) => ["Promenade Temecula", "Del Amo", "Tower Theatre"].includes(s.name)));
 });
 
 test("a watched store missing from Apple's answer is unknown, and its stock memory is kept", async () => {
@@ -196,6 +197,6 @@ test("v1 state.json is migrated without re-pinging", async () => {
 
 test("status.json carries the history summary", async () => {
   const { status } = await ctx.run();
-  assert.equal(status.history.grid.length, 7);
+  assert.equal(status.history.grid.length, 8);
   assert.ok(fs.existsSync("status.json"));
 });

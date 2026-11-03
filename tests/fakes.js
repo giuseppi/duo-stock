@@ -30,9 +30,10 @@ const WATCHED_HOURS = {
   R156: hours(at(SUN, T11_7), at(MON_THU, T10_8), at(FRI_SAT, T10_9)),
   R300: hours(at(SUN, T11_7), at(MON_SAT, T10_9)),
   R094: hours(at(SUN, T11_7), at(MON_THU, T10_8), at(FRI_SAT, T10_9)),
+  R034: hours(["Mon-Thu, Sun", "Monday-Thursday, Sunday", T10_8], at(FRI_SAT, T10_9)),
 };
 
-// The 12 stores Apple returned for 92618 on 2026-11-01. The first 7 are watched.
+// The 12 stores Apple returned for 92618 on 2026-11-01. The first 7 and Pasadena are watched.
 const APPLE_STORES = [
   ["Irvine Spectrum Center", "Irvine", "R146", 3.07],
   ["South Coast Plaza", "Costa Mesa", "R004", 9.4],
