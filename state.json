@@ -79,6 +79,16 @@
         "storeDays": "Fri-Sat",
         "storeTimings": "10:00 AM-9:00 PM"
       }
+    ],
+    "Pasadena": [
+      {
+        "storeDays": "Mon-Thu, Sun",
+        "storeTimings": "10:00 AM-8:00 PM"
+      },
+      {
+        "storeDays": "Fri-Sat",
+        "storeTimings": "10:00 AM-9:00 PM"
+      }
     ]
   },
   "restocks": [
