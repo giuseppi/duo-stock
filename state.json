@@ -206,6 +206,33 @@
           "out": null
         }
       }
+    },
+    {
+      "store": "Mission Viejo",
+      "parts": {
+        "MK1E4LL/A": {
+          "in": "2026-11-04T17:56:03.512Z",
+          "out": null
+        }
+      }
+    },
+    {
+      "store": "Fashion Island",
+      "parts": {
+        "MK1E4LL/A": {
+          "in": "2026-11-04T17:56:03.512Z",
+          "out": null
+        }
+      }
+    },
+    {
+      "store": "Brea Mall",
+      "parts": {
+        "MK1E4LL/A": {
+          "in": "2026-11-04T17:56:03.512Z",
+          "out": null
+        }
+      }
     }
   ]
 }
